@@ -1,0 +1,5 @@
+paho-mqtt
+dash
+plotly
+pandas
+boto3
