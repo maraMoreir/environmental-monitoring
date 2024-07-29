@@ -79,14 +79,16 @@ Follow the steps below to set up the environment and install the project's depen
 ## Project Structure
 
 environmental-monitoring/
-├── env/                   
-│   └── ...              
+├── data                 
+│   └── ...           
 ├── src/                
-│   ├── monitoring.py   
-│   ├── config.py           
-│   ├── sensors/           
-│   │   └── ...            
-│   └── dashboard/   
-│       └── ...           
+│   ├── cloud
+        └── aws_iot.py  
+│   ├── dashborad        
+        └── app.py
+│   ├── iot           
+│   │   └── sensor.py         
+│   └── utils   
+│       └── conifg.py           
 ├── requirements.txt  
 └── README.md               
