@@ -79,11 +79,14 @@ Follow the steps below to set up the environment and install the project's depen
 ## Project Structure
 
 environmental-monitoring/
-├── env/ # Virtual environment
-├── src/ # Source code
-│ ├── monitoring.py # Main script for data collection and analysis
-│ ├── config.py # Configuration and credentials
-│ ├── sensors/ # Sensor-specific code
-│ └── dashboard/ # Dashboard code
-├── requirements.txt # Project dependencies
-└── README.md # This file
+├── env/                    # Virtual environment
+│   └── ...                 # Environment-specific files and directories
+├── src/                    # Source code
+│   ├── monitoring.py       # Main script for data collection and analysis
+│   ├── config.py           # Configuration and credentials
+│   ├── sensors/            # Sensor-specific code
+│   │   └── ...             # Sensor modules and utilities
+│   └── dashboard/          # Dashboard code
+│       └── ...             # Dashboard modules and utilities
+├── requirements.txt        # Project dependencies
+└── README.md               # This file
