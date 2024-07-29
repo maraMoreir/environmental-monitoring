@@ -76,19 +76,4 @@ Follow the steps below to set up the environment and install the project's depen
 
    After running the code, you can access the dashboard at [http://localhost:8000](http://localhost:8000) to view the real-time data.
 
-## Project Structure
-
-environmental-monitoring/
-├── data                 
-│   └── ...           
-├── src/                
-│   ├── cloud
-        └── aws_iot.py  
-│   ├── dashborad        
-        └── app.py
-│   ├── iot           
-│   │   └── sensor.py         
-│   └── utils   
-│       └── conifg.py           
-├── requirements.txt  
-└── README.md               
+       
