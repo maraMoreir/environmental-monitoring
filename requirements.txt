@@ -1,5 +1,10 @@
-paho-mqtt
-dash
-plotly
-pandas
-boto3
+# Kept in sync with pyproject.toml's [project.dependencies] for users who
+# prefer `pip install -r requirements.txt` over an editable package install.
+# Versions pinned to the current major releases this codebase targets.
+paho-mqtt>=2.1,<3
+boto3>=1.43,<2
+dash>=4.4,<5
+plotly>=6.9,<7
+pandas>=3.0,<4
+pydantic>=2.10,<3
+pydantic-settings>=2.6,<3

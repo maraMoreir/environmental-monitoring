@@ -128,9 +128,18 @@ ENV/
 env.bak/
 venv.bak/
 
+# Local SQLite data (created by the demo pipeline)
+data/
+*.db
+*.db-shm
+*.db-wal
+
 # Spyder project settings
 .spyderproject
 .spyproject
+
+# Visual Studio
+.vs/
 
 # Rope project settings
 .ropeproject
