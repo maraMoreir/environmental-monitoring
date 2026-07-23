@@ -1,79 +1,125 @@
-# Environmental Monitoring with Python and IoT
+# Environmental Monitoring
 
-This project is a solution for environmental monitoring using IoT sensors and cloud data analysis. The goal is to create a system that collects environmental data, stores it in the cloud, and provides insights through interactive dashboards.
+[![CI](https://github.com/maraMoreir/environmental-monitoring/actions/workflows/ci.yml/badge.svg)](https://github.com/maraMoreir/environmental-monitoring/actions/workflows/ci.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-## Table of Contents
+A hexagonal-architecture IoT pipeline: sensors publish over **MQTT**, an
+ingestion service validates and persists readings to **SQLite**, an
+optional adapter forwards them to **AWS IoT Core**, and a **Dash**
+dashboard renders whatever was actually ingested — no synthetic data in the
+presentation layer. Runs end-to-end with a single `docker compose up`, at
+zero cost and with no AWS account required.
 
-- [Overview](#overview)
-- [Features](#features)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [Contributing](#contributing)
-- [License](#license)
+```mermaid
+flowchart LR
+    SIM[SimulatedSensor] -- MQTT --> MQTT[(Mosquitto)]
+    MQTT --> ING[Ingestion service]
+    ING --> DB[(SQLite)]
+    ING -. optional .-> AWS[AWS IoT Core]
+    DB --> DASH[Dash dashboard]
+```
 
-## Overview
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full data-flow
+diagram, layer breakdown, and the [ADRs](docs/adr/) behind each design
+decision.
 
-This project uses IoT sensors to monitor environmental variables such as temperature, humidity, and air quality. The data is sent to the cloud, where it is analyzed and visualized through an interactive dashboard.
+## Quickstart: Docker Compose (recommended)
 
-## Features
+Brings up a real Mosquitto broker, a simulated sensor publishing to it, an
+ingestion service persisting to SQLite, and the dashboard — four
+independent processes/containers, wired the same way a real deployment
+would be.
 
-- Real-time environmental data collection using IoT sensors.
-- Data storage and processing in the cloud.
-- Visualization of data through an interactive dashboard.
-- Real-time notifications based on specific conditions.
+```bash
+docker compose -f docker/docker-compose.yml up --build
+```
 
-## Requirements
+Open **http://localhost:8050** — the chart populates within a few seconds
+as the simulator publishes and the ingestion service consumes.
 
-- Python 3.x
-- `requests` library for API communication.
-- `pandas` library for data manipulation.
-- `matplotlib` library for data visualization.
-- Other dependencies specified in `requirements.txt`.
+## Quickstart: local, no Docker
 
-## Installation
+Requires a running MQTT broker (e.g. `mosquitto` installed locally, or the
+one from `docker compose -f docker/docker-compose.yml up mosquitto`).
 
-Follow the steps below to set up the environment and install the project's dependencies:
+```bash
+python -m venv env
+source env/bin/activate  # Windows: .\env\Scripts\activate
+pip install -e .
 
-1. **Clone the repository:**
+# terminal 1 — publishes synthetic readings
+python monitoring.py --mode simulate
 
-    ```bash
-    git clone https://github.com/maraMoreir/environmental-monitoring.git
-    cd environmental-monitoring
-    ```
+# terminal 2 — subscribes, validates, persists to data/readings.db
+python monitoring.py --mode ingest
 
-2. **Create and activate a virtual environment:**
+# terminal 3 — reads data/readings.db, serves http://localhost:8050
+python -m environmental_monitoring.dashboard
+```
 
-    ```bash
-    python -m venv env
-    source env/bin/activate  # On Windows use `.\env\Scripts\activate`
-    ```
+Copy [`.env.example`](.env.example) to `.env` to override any setting
+(broker host/port, database path, dashboard port, ...). Nothing in it needs
+to be a real secret — AWS credentials, if you enable AWS IoT forwarding, are
+read from the standard AWS credential chain, never from this repo.
 
-3. **Install the dependencies:**
+## Project structure
 
-    ```bash
-    pip install -r requirements.txt
-    ```
+```
+src/environmental_monitoring/
+├── domain/           # SensorReading, AirQualityLevel — no I/O
+├── application/       # ports.py (interfaces) + services.py (IngestionService)
+├── infrastructure/    # mqtt_broker.py, aws_iot.py, repository.py, simulator.py
+├── dashboard/         # Dash app factory, reads from a ReadingRepository
+├── config.py          # env-var settings (pydantic-settings)
+└── cli.py             # `envmon --mode simulate|ingest` — composition root
+docker/                 # Dockerfile + docker-compose.yml (mosquitto/simulator/ingestion/dashboard)
+docs/                   # ARCHITECTURE.md + ADRs
+tests/                  # mirrors src/, one test module per adapter/service
+```
 
-## Usage
+## Testing
 
-1. **Sensor Configuration:**
+```bash
+pip install -e ".[dev]"
+ruff check .        # lint
+ruff format --check . 
+mypy src             # types
+pytest                # 47 tests, unit + adapter, no live broker/DB/AWS required
+```
 
-   Configure your IoT sensors according to the instructions. Ensure they are connected and sending data correctly.
+Unit tests for `domain`/`application` use in-memory fakes; adapter tests
+mock paho-mqtt/boto3 or use a `tmp_path` SQLite file. CI
+(`.github/workflows/ci.yml`) runs all of the above on Python 3.11, 3.12, and
+3.13, plus a Docker build sanity check.
 
-2. **Environment Setup:**
+## Configuration
 
-   Update the `config.py` file with your cloud and API credentials and settings.
+All settings are environment variables with an `ENVMON_` prefix (see
+[`config.py`](src/environmental_monitoring/config.py) /
+[`.env.example`](.env.example)). Highlights:
 
-3. **Run the Code:**
+| Variable | Default | Purpose |
+|---|---|---|
+| `ENVMON_MQTT_BROKER_HOST` | `localhost` | MQTT broker to connect to |
+| `ENVMON_DATABASE_PATH` | `data/readings.db` | SQLite file shared by ingestion and the dashboard |
+| `ENVMON_AWS_IOT_ENABLED` | `false` | Forward readings to AWS IoT Core (needs AWS credentials in the environment) |
+| `ENVMON_DASHBOARD_PORT` | `8050` | Dashboard HTTP port |
 
-    ```bash
-    python monitoring.py
-    ```
+## Limitations
 
-4. **Access the Dashboard:**
+- **The sensor data is synthetic.** `SimulatedSensor` generates a bounded
+  random walk, not real hardware readings — see
+  [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#whats-synthetic). Swapping in
+  a real sensor means implementing one `ReadingSource`; nothing else
+  changes.
+- **SQLite is a single-writer store**, appropriate for this demo's one
+  ingestion process. A production deployment would swap in a managed
+  database behind the same `ReadingRepository` port (see
+  [ADR 0002](docs/adr/0002-sqlite-demo-persistence.md)).
+- **The Mosquitto config allows anonymous connections**, intentionally, for
+  a zero-setup local demo — not meant for anything internet-facing.
 
-   After running the code, you can access the dashboard at [http://localhost:8000](http://localhost:8000) to view the real-time data.
+## License
 
-       
+[MIT](LICENSE)
