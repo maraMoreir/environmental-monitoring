@@ -71,3 +71,29 @@ def test_sensor_id_with_sql_metacharacters_is_stored_safely(tmp_path: Path) -> N
     repo.save(reading)
 
     assert [r.sensor_id for r in repo.latest()] == [malicious_id]
+
+
+def test_latest_filters_by_sensor_id(tmp_path: Path) -> None:
+    repo = SqliteReadingRepository(tmp_path / "readings.db")
+    repo.save(_reading("br-sp", 0))
+    repo.save(_reading("br-rj", 1))
+    repo.save(_reading("br-sp", 2))
+
+    result = repo.latest(sensor_id="br-rj")
+
+    assert result == [_reading("br-rj", 1)]
+
+
+def test_distinct_sensor_ids_returns_sorted_unique_ids(tmp_path: Path) -> None:
+    repo = SqliteReadingRepository(tmp_path / "readings.db")
+    repo.save(_reading("br-sp", 0))
+    repo.save(_reading("br-rj", 1))
+    repo.save(_reading("br-sp", 2))
+
+    assert repo.distinct_sensor_ids() == ["br-rj", "br-sp"]
+
+
+def test_distinct_sensor_ids_empty_when_no_readings(tmp_path: Path) -> None:
+    repo = SqliteReadingRepository(tmp_path / "readings.db")
+
+    assert repo.distinct_sensor_ids() == []

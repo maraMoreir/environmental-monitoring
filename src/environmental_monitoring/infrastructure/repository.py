@@ -33,12 +33,22 @@ INSERT INTO readings (sensor_id, timestamp, pm2_5, pm10, temperature_celsius, hu
 VALUES (?, ?, ?, ?, ?, ?)
 """
 
-_SELECT_LATEST = """
+_SELECT_LATEST_ALL = """
 SELECT sensor_id, timestamp, pm2_5, pm10, temperature_celsius, humidity_percent
 FROM readings
 ORDER BY timestamp DESC
 LIMIT ?
 """
+
+_SELECT_LATEST_BY_SENSOR = """
+SELECT sensor_id, timestamp, pm2_5, pm10, temperature_celsius, humidity_percent
+FROM readings
+WHERE sensor_id = ?
+ORDER BY timestamp DESC
+LIMIT ?
+"""
+
+_SELECT_DISTINCT_SENSOR_IDS = "SELECT DISTINCT sensor_id FROM readings ORDER BY sensor_id"
 
 
 class SqliteReadingRepository:
@@ -69,9 +79,12 @@ class SqliteReadingRepository:
                 ),
             )
 
-    def latest(self, limit: int = 100) -> list[SensorReading]:
+    def latest(self, limit: int = 100, *, sensor_id: str | None = None) -> list[SensorReading]:
         with closing(self._connect()) as conn:
-            rows = conn.execute(_SELECT_LATEST, (limit,)).fetchall()
+            if sensor_id is None:
+                rows = conn.execute(_SELECT_LATEST_ALL, (limit,)).fetchall()
+            else:
+                rows = conn.execute(_SELECT_LATEST_BY_SENSOR, (sensor_id, limit)).fetchall()
         readings = [
             SensorReading(
                 sensor_id=row[0],
@@ -85,3 +98,8 @@ class SqliteReadingRepository:
         ]
         readings.reverse()  # rows come back newest-first; charts want chronological order
         return readings
+
+    def distinct_sensor_ids(self) -> list[str]:
+        with closing(self._connect()) as conn:
+            rows = conn.execute(_SELECT_DISTINCT_SENSOR_IDS).fetchall()
+        return [row[0] for row in rows]
