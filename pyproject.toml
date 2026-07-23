@@ -24,6 +24,9 @@ dependencies = [
     "pandas>=3.0,<4",
     "pydantic>=2.10,<3",
     "pydantic-settings>=2.6,<3",
+    "requests>=2.32,<3",
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.32,<1",
 ]
 
 [project.optional-dependencies]
@@ -34,6 +37,8 @@ dev = [
     "mypy>=1.13",
     "boto3-stubs[iot-data]>=1.43",
     "pandas-stubs>=2.2",
+    "types-requests>=2.32",
+    "httpx2>=2.0,<3",
 ]
 
 [project.scripts]
@@ -41,6 +46,9 @@ envmon = "environmental_monitoring.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"environmental_monitoring.dashboard" = ["assets/*.css"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
