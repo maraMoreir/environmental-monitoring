@@ -239,9 +239,7 @@ def create_app(
                 className="envmon-chart-card",
             ),
             html.Div(
-                "As leituras são ingeridas via MQTT a partir da fonte configurada no pipeline "
-                "— dados reais da OpenWeatherMap ou o simulador sintético. Veja "
-                "docs/ARCHITECTURE.md.",
+                "As leituras são ingeridas via MQTT — dados reais da OpenWeatherMap.",
                 className="envmon-footer",
             ),
             dcc.Interval(id="refresh-interval", interval=REFRESH_INTERVAL_MS, n_intervals=0),
