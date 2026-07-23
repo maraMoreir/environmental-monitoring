@@ -40,3 +40,19 @@ def test_get_settings_is_cached() -> None:
 def test_aws_iot_enabled_without_endpoint_fails_fast() -> None:
     with pytest.raises(ValidationError, match="ENVMON_AWS_IOT_ENDPOINT"):
         Settings(_env_file=None, aws_iot_enabled=True, aws_iot_endpoint="")
+
+
+def test_sensor_location_label_joins_city_state_country() -> None:
+    settings = Settings(
+        _env_file=None, sensor_city="São Paulo", sensor_state="SP", sensor_country="Brazil"
+    )
+
+    assert settings.sensor_location_label == "São Paulo, SP, Brazil"
+
+
+def test_sensor_location_label_skips_empty_parts() -> None:
+    settings = Settings(
+        _env_file=None, sensor_city="Berlin", sensor_state="", sensor_country="Germany"
+    )
+
+    assert settings.sensor_location_label == "Berlin, Germany"

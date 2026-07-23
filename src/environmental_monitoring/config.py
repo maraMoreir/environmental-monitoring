@@ -31,16 +31,31 @@ class Settings(BaseSettings):
 
     database_path: str = "data/readings.db"
     dashboard_port: int = 8050
+    api_port: int = 8000
     debug: bool = False
 
     sensor_id: str = "sensor-001"
-    simulation_interval_seconds: float = 5.0
+    publish_interval_seconds: float = 5.0
+    sensor_city: str = "São Paulo"
+    sensor_state: str = "SP"
+    sensor_country: str = "Brazil"
+
+    openweather_api_key: str = ""
+    openweather_latitude: float = 0.0
+    openweather_longitude: float = 0.0
 
     @model_validator(mode="after")
     def _require_endpoint_when_aws_iot_enabled(self) -> Self:
         if self.aws_iot_enabled and not self.aws_iot_endpoint:
             raise ValueError("ENVMON_AWS_IOT_ENDPOINT must be set when ENVMON_AWS_IOT_ENABLED=true")
         return self
+
+    @property
+    def sensor_location_label(self) -> str:
+        """Human-readable "City, State, Country" for display, skipping empty parts."""
+        return ", ".join(
+            part for part in (self.sensor_city, self.sensor_state, self.sensor_country) if part
+        )
 
 
 @lru_cache
