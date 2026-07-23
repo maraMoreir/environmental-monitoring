@@ -53,7 +53,7 @@ containers sharing a volume; run locally, they're two terminals.
 |---|---|---|---|
 | Domain | `domain/` | nothing | `SensorReading`, `AirQualityLevel`, validation |
 | Application | `application/` | `domain/` | `ports.py` (`Protocol`s), `services.py` (`IngestionService`) |
-| Infrastructure | `infrastructure/` | `application/`, `domain/` | `mqtt_broker.py`, `aws_iot.py`, `repository.py`, `simulator.py` |
+| Infrastructure | `infrastructure/` | `application/`, `domain/` | `mqtt_broker.py`, `aws_iot.py`, `repository.py`, `simulator.py`, `openweather_sensor.py` |
 | Dashboard | `dashboard/` | `application/` (port only) | Dash app factory |
 | Composition root | `cli.py`, `dashboard/__main__.py` | everything | wires concrete adapters into services |
 
@@ -70,10 +70,17 @@ Short version — see the ADRs for the full reasoning:
 - [0002 — SQLite for demo persistence](adr/0002-sqlite-demo-persistence.md)
 - [0003 — paho-mqtt v2 callback API & AWS IoT as optional](adr/0003-mqtt-v2-callback-api.md)
 
-## What's synthetic
+## What's synthetic (and what isn't)
 
 There is no real hardware behind this project. `SimulatedSensor` generates a
-bounded random walk of PM2.5/PM10/temperature/humidity so the dashboard
-shows a plausible-looking trend — clearly labeled as synthetic, not
-disguised as real sensor data. Swapping in a real sensor means writing one
-new `ReadingSource` implementation; nothing else in the pipeline changes.
+bounded random walk of PM2.5/PM10/temperature/humidity — used by the default
+Docker Compose demo — clearly labeled as synthetic, not disguised as real
+sensor data.
+
+`OpenWeatherAirQualitySensor` (`--mode openweather`) is the concrete proof
+that swapping data sources is cheap: it implements the exact same
+`ReadingSource` port and fetches real, currently-measured PM2.5/PM10 from the
+OpenWeatherMap Air Pollution API for a given latitude/longitude. Nothing in
+`application/` or `dashboard/` changed to add it — see
+[`infrastructure/openweather_sensor.py`](../src/environmental_monitoring/infrastructure/openweather_sensor.py).
+A real hardware sensor would be implemented the same way.
