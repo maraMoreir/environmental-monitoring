@@ -1,4 +1,4 @@
-"""Command-line entrypoints for the two pipeline stages: simulate and ingest.
+"""Command-line entrypoints for the pipeline stages: simulate, openweather, ingest.
 
 Installed as the `envmon` console script; `monitoring.py` at the repo root is
 a thin delegator to `main()` for users who haven't done an editable install.
@@ -10,10 +10,12 @@ import argparse
 import logging
 import time
 
+from environmental_monitoring.application.ports import ReadingSource
 from environmental_monitoring.application.services import IngestionService
 from environmental_monitoring.config import Settings, get_settings
 from environmental_monitoring.infrastructure.aws_iot import AwsIotPublisher
 from environmental_monitoring.infrastructure.mqtt_broker import MqttReadingBroker
+from environmental_monitoring.infrastructure.openweather_sensor import OpenWeatherAirQualitySensor
 from environmental_monitoring.infrastructure.repository import SqliteReadingRepository
 from environmental_monitoring.infrastructure.simulator import SimulatedSensor
 
@@ -31,11 +33,27 @@ def _build_broker(settings: Settings, client_id: str) -> MqttReadingBroker:
     )
 
 
+def _run_publish_loop(
+    sensor: ReadingSource, broker: MqttReadingBroker, interval_seconds: float, label: str
+) -> None:
+    """Shared publish loop: any `ReadingSource` (synthetic or real) drives it identically."""
+    broker.connect()
+    try:
+        while True:
+            reading = sensor.read()
+            broker.publish(reading)
+            logger.info("Published %s", reading)
+            time.sleep(interval_seconds)
+    except KeyboardInterrupt:
+        logger.info("%s stopped.", label)
+    finally:
+        broker.disconnect()
+
+
 def run_simulate(settings: Settings) -> None:
     """Generate synthetic readings and publish them over MQTT, like a real sensor would."""
     sensor = SimulatedSensor(settings.sensor_id)
     broker = _build_broker(settings, client_id=f"simulator-{settings.sensor_id}")
-    broker.connect()
     logger.info(
         "Publishing simulated readings for %s to %s:%s/%s",
         settings.sensor_id,
@@ -43,16 +61,32 @@ def run_simulate(settings: Settings) -> None:
         settings.mqtt_broker_port,
         settings.mqtt_topic,
     )
-    try:
-        while True:
-            reading = sensor.read()
-            broker.publish(reading)
-            logger.info("Published %s", reading)
-            time.sleep(settings.simulation_interval_seconds)
-    except KeyboardInterrupt:
-        logger.info("Simulator stopped.")
-    finally:
-        broker.disconnect()
+    _run_publish_loop(sensor, broker, settings.publish_interval_seconds, "Simulator")
+
+
+def run_openweather(settings: Settings) -> None:
+    """Poll real air-quality data from OpenWeatherMap and publish it over MQTT."""
+    if not settings.openweather_api_key:
+        raise SystemExit(
+            "ENVMON_OPENWEATHER_API_KEY is required for --mode openweather "
+            "(get a free key at https://openweathermap.org/api/air-pollution)"
+        )
+    sensor = OpenWeatherAirQualitySensor(
+        sensor_id=settings.sensor_id,
+        api_key=settings.openweather_api_key,
+        latitude=settings.openweather_latitude,
+        longitude=settings.openweather_longitude,
+    )
+    broker = _build_broker(settings, client_id=f"openweather-{settings.sensor_id}")
+    logger.info(
+        "Publishing real OpenWeatherMap air-quality readings for (%s, %s) to %s:%s/%s",
+        settings.openweather_latitude,
+        settings.openweather_longitude,
+        settings.mqtt_broker_host,
+        settings.mqtt_broker_port,
+        settings.mqtt_topic,
+    )
+    _run_publish_loop(sensor, broker, settings.publish_interval_seconds, "OpenWeatherMap publisher")
 
 
 def run_ingest(settings: Settings) -> None:
@@ -89,10 +123,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--mode",
-        choices=["simulate", "ingest"],
+        choices=["simulate", "openweather", "ingest"],
         required=True,
-        help="'simulate' publishes synthetic readings over MQTT; "
-        "'ingest' consumes and persists them.",
+        help="'simulate' publishes synthetic readings over MQTT; 'openweather' publishes "
+        "real air-quality readings from the OpenWeatherMap API; 'ingest' consumes and "
+        "persists them.",
     )
     parser.add_argument("--log-level", default="INFO", help="Python logging level (default: INFO).")
     return parser
@@ -105,10 +140,8 @@ def main(argv: list[str] | None = None) -> None:
     )
 
     settings = get_settings()
-    if args.mode == "simulate":
-        run_simulate(settings)
-    else:
-        run_ingest(settings)
+    dispatch = {"simulate": run_simulate, "openweather": run_openweather, "ingest": run_ingest}
+    dispatch[args.mode](settings)
 
 
 if __name__ == "__main__":
