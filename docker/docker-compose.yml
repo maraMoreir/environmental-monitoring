@@ -1,0 +1,82 @@
+name: environmental-monitoring
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -t '$$SYS/#' -C 1 -i healthcheck -W 3 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Publishes real, currently-measured PM2.5/PM10 for all 27 Brazilian state
+  # capitals from the OpenWeatherMap Air Pollution API — requires a free API
+  # key. Copy docker/.env.example to docker/.env and set
+  # ENVMON_OPENWEATHER_API_KEY (docker compose loads docker/.env
+  # automatically). For a single fixed location instead of all 27, change
+  # `command` to `["monitoring.py", "--mode", "openweather"]` and set
+  # ENVMON_OPENWEATHER_LATITUDE/LONGITUDE. For the zero-signup synthetic
+  # alternative, change `command`/`--mode` to `simulate` — see README.
+  sensor-source:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: ["monitoring.py", "--mode", "openweather-br"]
+    environment:
+      ENVMON_MQTT_BROKER_HOST: mosquitto
+      ENVMON_PUBLISH_INTERVAL_SECONDS: "600"
+      ENVMON_OPENWEATHER_API_KEY: ${ENVMON_OPENWEATHER_API_KEY:?Set ENVMON_OPENWEATHER_API_KEY in docker/.env — see docker/.env.example}
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+
+  ingestion:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: ["monitoring.py", "--mode", "ingest"]
+    environment:
+      ENVMON_MQTT_BROKER_HOST: mosquitto
+      ENVMON_DATABASE_PATH: /data/readings.db
+    volumes:
+      - envmon-data:/data
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+
+  dashboard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: ["-m", "environmental_monitoring.dashboard"]
+    environment:
+      ENVMON_DATABASE_PATH: /data/readings.db
+      ENVMON_DASHBOARD_PORT: "8050"
+    ports:
+      - "8050:8050"
+    volumes:
+      - envmon-data:/data
+    depends_on:
+      - ingestion
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: ["-m", "environmental_monitoring.api"]
+    environment:
+      ENVMON_DATABASE_PATH: /data/readings.db
+      ENVMON_API_PORT: "8000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - envmon-data:/data
+    depends_on:
+      - ingestion
+
+volumes:
+  envmon-data:
