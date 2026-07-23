@@ -8,7 +8,7 @@ A hexagonal-architecture IoT pipeline: sensors publish over **MQTT**, an
 ingestion service validates and persists readings to **SQLite**, an
 optional adapter forwards them to **AWS IoT Core**, and both a **Dash**
 dashboard (Portuguese UI, per-state dropdown) and a **FastAPI** REST API
-render whatever was actually ingested — no synthetic data in either
+render whatever was actually ingested - no synthetic data in either
 presentation layer. By default the pipeline publishes **real,
 currently-measured PM2.5/PM10 for all 27 Brazilian state capitals at once**
 via the OpenWeatherMap Air Pollution API (free key required); a synthetic
@@ -35,7 +35,7 @@ decision.
 Brings up a real Mosquitto broker, a sensor source publishing real
 OpenWeatherMap air-quality data for all 27 Brazilian state capitals to it,
 an ingestion service persisting to SQLite, the dashboard, and the REST API
-— five independent processes/containers, wired the same way a real
+- five independent processes/containers, wired the same way a real
 deployment would be.
 
 Requires a free API key (no card): sign up at
@@ -48,7 +48,7 @@ cp docker/.env.example docker/.env
 docker compose -f docker/docker-compose.yml up --build
 ```
 
-Open **http://localhost:8050** for the dashboard — pick a state from the
+Open **http://localhost:8050** for the dashboard - pick a state from the
 dropdown. The first round of all 27 capitals takes about a minute to
 publish (a short delay between each API call to stay under the free-tier
 rate limit), then repeats every 10 minutes by default. The REST API is at
@@ -56,9 +56,9 @@ rate limit), then repeats every 10 minutes by default. The REST API is at
 interactive docs at `/docs`).
 
 Don't want to sign up for anything? Edit `docker/docker-compose.yml`'s
-`sensor-source` service — change `command` to
+`sensor-source` service - change `command` to
 `["monitoring.py", "--mode", "simulate"]` and drop the `ENVMON_OPENWEATHER_API_KEY`
-line — to run the zero-signup synthetic simulator instead (single sensor,
+line - to run the zero-signup synthetic simulator instead (single sensor,
 `sensor-001`).
 
 ## Quickstart: local, no Docker
@@ -71,22 +71,22 @@ python -m venv env
 source env/bin/activate  # Windows: .\env\Scripts\activate
 pip install -e .
 
-# terminal 1 — publishes synthetic readings
+# terminal 1 - publishes synthetic readings
 python monitoring.py --mode simulate
 
-# terminal 2 — subscribes, validates, persists to data/readings.db
+# terminal 2 - subscribes, validates, persists to data/readings.db
 python monitoring.py --mode ingest
 
-# terminal 3 — reads data/readings.db, serves http://localhost:8050
+# terminal 3 - reads data/readings.db, serves http://localhost:8050
 python -m environmental_monitoring.dashboard
 
-# terminal 4 (optional) — REST API at http://localhost:8000/docs
+# terminal 4 (optional) - REST API at http://localhost:8000/docs
 python -m environmental_monitoring.api
 ```
 
 Copy [`.env.example`](.env.example) to `.env` to override any setting
 (broker host/port, database path, dashboard port, ...). Nothing in it needs
-to be a real secret — AWS credentials, if you enable AWS IoT forwarding, are
+to be a real secret - AWS credentials, if you enable AWS IoT forwarding, are
 read from the standard AWS credential chain, never from this repo.
 
 ### Using real data instead of the simulator
@@ -105,7 +105,7 @@ python monitoring.py --mode openweather-br
 ```
 
 Everything downstream (ingestion, SQLite, the dashboard, the API) is
-unchanged regardless of mode — `OpenWeatherAirQualitySensor` implements the
+unchanged regardless of mode - `OpenWeatherAirQualitySensor` implements the
 same `ReadingSource` port as `SimulatedSensor`, one instance per location
 (see
 [`infrastructure/openweather_sensor.py`](src/environmental_monitoring/infrastructure/openweather_sensor.py)
@@ -114,7 +114,7 @@ and
 
 ## REST API
 
-A second, independent read path over the same persisted data — for another
+A second, independent read path over the same persisted data - for another
 service or client, not a second ingestion pipeline. Interactive docs (Swagger
 UI) are auto-generated at `/docs`.
 
@@ -142,13 +142,13 @@ curl http://localhost:8000/readings/latest?sensor_id=br-sp&limit=10   # filter t
 
 ```
 src/environmental_monitoring/
-├── domain/           # SensorReading, AirQualityLevel — no I/O
+├── domain/           # SensorReading, AirQualityLevel - no I/O
 ├── application/       # ports.py (interfaces) + services.py (IngestionService)
 ├── infrastructure/    # mqtt_broker.py, aws_iot.py, repository.py, simulator.py, openweather_sensor.py
 ├── dashboard/         # Dash app factory, reads from a ReadingRepository
 ├── api/                # FastAPI app factory, reads from the same ReadingRepository
 ├── config.py          # env-var settings (pydantic-settings)
-└── cli.py             # `envmon --mode simulate|openweather|ingest` — composition root
+└── cli.py             # `envmon --mode simulate|openweather|ingest` - composition root
 docker/                 # Dockerfile + docker-compose.yml (mosquitto/sensor-source/ingestion/dashboard/api)
 docs/                   # ARCHITECTURE.md + ADRs
 tests/                  # mirrors src/, one test module per adapter/service
@@ -182,15 +182,15 @@ All settings are environment variables with an `ENVMON_` prefix (see
 | `ENVMON_AWS_IOT_ENABLED` | `false` | Forward readings to AWS IoT Core (needs AWS credentials in the environment) |
 | `ENVMON_DASHBOARD_PORT` | `8050` | Dashboard HTTP port |
 | `ENVMON_API_PORT` | `8000` | REST API HTTP port |
-| `ENVMON_OPENWEATHER_API_KEY` | *(empty)* | Required for `--mode openweather` (the Docker Compose default) — real air-quality data |
+| `ENVMON_OPENWEATHER_API_KEY` | *(empty)* | Required for `--mode openweather` (the Docker Compose default) - real air-quality data |
 
 ## Limitations
 
 - **Real, but not from real hardware.** The default `--mode openweather`
-  publishes actual currently-measured PM2.5/PM10 from a public API — real
+  publishes actual currently-measured PM2.5/PM10 from a public API - real
   data, but sourced from OpenWeatherMap's network, not a physical sensor
   this project owns. `SimulatedSensor` (`--mode simulate`) is also
-  available as a zero-signup synthetic fallback — see
+  available as a zero-signup synthetic fallback - see
   [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#whats-synthetic). A real
   hardware sensor would be one more `ReadingSource` implementation; nothing
   else in the pipeline changes.
@@ -199,7 +199,7 @@ All settings are environment variables with an `ENVMON_` prefix (see
   database behind the same `ReadingRepository` port (see
   [ADR 0002](docs/adr/0002-sqlite-demo-persistence.md)).
 - **The Mosquitto config allows anonymous connections**, intentionally, for
-  a zero-setup local demo — not meant for anything internet-facing.
+  a zero-setup local demo - not meant for anything internet-facing.
 
 ## License
 
