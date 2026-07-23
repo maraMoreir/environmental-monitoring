@@ -24,7 +24,10 @@ from environmental_monitoring.infrastructure.simulator import SimulatedSensor
 
 logger = logging.getLogger(__name__)
 
-_BRAZIL_INTER_CALL_DELAY_SECONDS = 1.5
+# Each sensor.read() now makes 2 API calls (air pollution + weather), so this
+# paces 27 locations x 2 calls = 54 calls comfortably under OpenWeatherMap's
+# free-tier 60 calls/minute limit (~43 calls/min at this delay).
+_BRAZIL_INTER_CALL_DELAY_SECONDS = 2.5
 
 
 def _build_broker(settings: Settings, client_id: str) -> MqttReadingBroker:
@@ -102,9 +105,10 @@ def run_openweather_brazil(settings: Settings) -> None:
     """Poll real air-quality data for all 27 Brazilian state capitals and publish over MQTT.
 
     One process, one MQTT connection, N `OpenWeatherAirQualitySensor` instances (one per
-    capital) — each publish round spaces the 27 API calls out by
-    `_BRAZIL_INTER_CALL_DELAY_SECONDS` to stay well under OpenWeatherMap's rate limit, then
-    sleeps out the rest of `publish_interval_seconds` before the next round.
+    capital) — each publish round spaces the per-location reads out by
+    `_BRAZIL_INTER_CALL_DELAY_SECONDS` to stay well under OpenWeatherMap's rate limit (each
+    read is itself 2 API calls: air pollution + weather), then sleeps out the rest of
+    `publish_interval_seconds` before the next round.
     """
     _require_openweather_api_key(settings, "openweather-br")
     sensors = [

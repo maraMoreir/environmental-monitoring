@@ -131,8 +131,8 @@ curl http://localhost:8000/readings/latest?sensor_id=br-sp&limit=10   # filter t
     "timestamp": "2026-07-23T18:25:38.175647+00:00",
     "pm2_5": 21.5,
     "pm10": 31.0,
-    "temperature_celsius": null,
-    "humidity_percent": null,
+    "temperature_celsius": 23.7,
+    "humidity_percent": 54.0,
     "air_quality_level": "moderate"
   }
 ]
