@@ -1,0 +1,138 @@
+:root {
+  color-scheme: light;
+  --page-plane: #f9f9f7;
+  --surface-1: #fcfcfb;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --border: rgba(11, 11, 11, 0.1);
+
+  --series-pm25: #2a78d6;
+  --series-pm10: #eb6834;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--page-plane);
+  color: var(--text-primary);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}
+
+.envmon-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+}
+
+.envmon-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 24px;
+  margin-bottom: 24px;
+}
+
+.envmon-title {
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.envmon-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 4px 0 0;
+}
+
+.envmon-location {
+  font-size: 14px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.envmon-stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.envmon-stat-tile {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.envmon-stat-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.envmon-stat-value {
+  font-size: 26px;
+  font-weight: 600;
+  margin-top: 4px;
+  color: var(--text-primary);
+}
+
+.envmon-stat-accent-pm25 {
+  color: var(--series-pm25);
+}
+
+.envmon-stat-accent-pm10 {
+  color: var(--series-pm10);
+}
+
+.envmon-status-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.envmon-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.envmon-chart-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 8px 0;
+}
+
+.envmon-footer {
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.envmon-empty {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--text-secondary);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
