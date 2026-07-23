@@ -13,7 +13,11 @@ def main() -> None:
     logging.basicConfig(level="INFO", format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     settings = get_settings()
     repository = SqliteReadingRepository(settings.database_path)
-    app = create_app(repository, location=settings.sensor_location_label)
+    app = create_app(
+        repository,
+        default_sensor_id=settings.sensor_id,
+        default_sensor_label=settings.sensor_location_label,
+    )
     app.run(host="0.0.0.0", port=settings.dashboard_port, debug=settings.debug)  # noqa: S104
 
 

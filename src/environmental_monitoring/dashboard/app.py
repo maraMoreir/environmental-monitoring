@@ -2,9 +2,13 @@
 
 The dashboard depends only on the `ReadingRepository` port and renders
 whatever has actually been ingested and persisted — it never fabricates data
-itself. Presentation logic (`_build_figure`, `_build_summary`) is split into
-plain functions so it can be unit tested without spinning up Dash's callback
-machinery.
+itself. Presentation logic (`_build_figure`, `_build_summary`,
+`_build_sensor_options`) is split into plain functions so it can be unit
+tested without spinning up Dash's callback machinery.
+
+User-facing copy is in Portuguese (the product is a Brazilian air-quality
+dashboard); identifiers, comments, and docstrings stay in English like the
+rest of the codebase.
 """
 
 from __future__ import annotations
@@ -14,9 +18,10 @@ from typing import Any
 
 import pandas as pd
 import plotly.graph_objs as go
-from dash import Dash, Input, Output, dcc, html
+from dash import Dash, Input, Output, State, dcc, html
 
 from environmental_monitoring.application.ports import ReadingRepository
+from environmental_monitoring.domain.locations import BRAZIL_STATE_CAPITALS
 from environmental_monitoring.domain.models import AirQualityLevel, SensorReading
 
 REFRESH_INTERVAL_MS = 5_000
@@ -30,21 +35,57 @@ _GRIDLINE_COLOR = "#e1e0d9"
 _AXIS_COLOR = "#c3c2b7"
 _MUTED_TEXT = "#898781"
 
+_BRAZIL_SENSOR_LABELS: dict[str, str] = {loc.sensor_id: loc.label for loc in BRAZIL_STATE_CAPITALS}
+
 # (background, text, label) per AirQualityLevel. Six domain levels fold into
 # four status tiers (good/warning/serious/critical) since that's the fixed,
 # reserved status palette; severity stays monotonic across the fold.
 _STATUS_STYLE: dict[AirQualityLevel, tuple[str, str, str]] = {
-    AirQualityLevel.GOOD: ("#0ca30c", "#ffffff", "Good"),
-    AirQualityLevel.MODERATE: ("#fab219", "#0b0b0b", "Moderate"),
+    AirQualityLevel.GOOD: ("#0ca30c", "#ffffff", "Boa"),
+    AirQualityLevel.MODERATE: ("#fab219", "#0b0b0b", "Moderada"),
     AirQualityLevel.UNHEALTHY_FOR_SENSITIVE_GROUPS: (
         "#ec835a",
         "#0b0b0b",
-        "Unhealthy (sensitive groups)",
+        "Insalubre (grupos sensíveis)",
     ),
-    AirQualityLevel.UNHEALTHY: ("#d03b3b", "#ffffff", "Unhealthy"),
-    AirQualityLevel.VERY_UNHEALTHY: ("#d03b3b", "#ffffff", "Very unhealthy"),
-    AirQualityLevel.HAZARDOUS: ("#d03b3b", "#ffffff", "Hazardous"),
+    AirQualityLevel.UNHEALTHY: ("#d03b3b", "#ffffff", "Insalubre"),
+    AirQualityLevel.VERY_UNHEALTHY: ("#d03b3b", "#ffffff", "Muito insalubre"),
+    AirQualityLevel.HAZARDOUS: ("#d03b3b", "#ffffff", "Perigosa"),
 }
+
+
+def _sensor_label(sensor_id: str, *, default_sensor_id: str = "", default_label: str = "") -> str:
+    if sensor_id in _BRAZIL_SENSOR_LABELS:
+        return _BRAZIL_SENSOR_LABELS[sensor_id]
+    if sensor_id == default_sensor_id and default_label:
+        return default_label
+    return sensor_id
+
+
+def _build_sensor_options(
+    sensor_ids: list[str], *, default_sensor_id: str = "", default_label: str = ""
+) -> list[dict[str, str]]:
+    return [
+        {
+            "label": _sensor_label(
+                sid, default_sensor_id=default_sensor_id, default_label=default_label
+            ),
+            "value": sid,
+        }
+        for sid in sensor_ids
+    ]
+
+
+def _resolve_sensor_selection(
+    sensor_ids: list[str], current_value: str | None, default_sensor_id: str = ""
+) -> str | None:
+    """Keep the current dropdown selection if it's still valid; otherwise fall
+    back to the configured default sensor, or the first sensor available."""
+    if current_value in sensor_ids:
+        return current_value
+    if default_sensor_id in sensor_ids:
+        return default_sensor_id
+    return sensor_ids[0] if sensor_ids else None
 
 
 def _build_figure(readings: list[SensorReading]) -> go.Figure:
@@ -79,7 +120,7 @@ def _build_figure(readings: list[SensorReading]) -> go.Figure:
             },
             xaxis={"gridcolor": _GRIDLINE_COLOR, "linecolor": _AXIS_COLOR, "showline": True},
             yaxis={
-                "title": "Concentration (µg/m³)",
+                "title": "Concentração (µg/m³)",
                 "gridcolor": _GRIDLINE_COLOR,
                 "linecolor": _AXIS_COLOR,
                 "showline": True,
@@ -101,17 +142,21 @@ def _stat_tile(label: str, value: str, accent_class: str = "") -> html.Div:
     )
 
 
-def _build_summary(readings: list[SensorReading]) -> list[Any]:
+def _build_summary(
+    readings: list[SensorReading], *, default_sensor_id: str = "", default_label: str = ""
+) -> list[Any]:
     if not readings:
         return [
             html.Div(
-                "Waiting for sensor data — start the simulator or ingestion service.",
+                "Aguardando dados do sensor — inicie o simulador ou o serviço de ingestão.",
                 className="envmon-empty",
             )
         ]
 
     latest = readings[-1]
-    sensor_count = len({r.sensor_id for r in readings})
+    location_label = _sensor_label(
+        latest.sensor_id, default_sensor_id=default_sensor_id, default_label=default_label
+    )
     bg_color, text_color, status_label = _STATUS_STYLE[latest.air_quality_level]
 
     stat_row = html.Div(
@@ -119,13 +164,13 @@ def _build_summary(readings: list[SensorReading]) -> list[Any]:
             _stat_tile("PM2.5", f"{latest.pm2_5:.1f} µg/m³", "envmon-stat-accent-pm25"),
             _stat_tile("PM10", f"{latest.pm10:.1f} µg/m³", "envmon-stat-accent-pm10"),
             _stat_tile(
-                "Temperature",
+                "Temperatura",
                 f"{latest.temperature_celsius:.1f} °C"
                 if latest.temperature_celsius is not None
                 else "—",
             ),
             _stat_tile(
-                "Humidity",
+                "Umidade",
                 f"{latest.humidity_percent:.1f}%" if latest.humidity_percent is not None else "—",
             ),
         ],
@@ -140,8 +185,8 @@ def _build_summary(readings: list[SensorReading]) -> list[Any]:
                 style={"backgroundColor": bg_color, "color": text_color},
             ),
             html.Span(
-                f"{len(readings)} readings from {sensor_count} sensor(s) · "
-                f"last updated {latest.timestamp.strftime('%H:%M:%S UTC')}"
+                f"{len(readings)} leituras — {location_label} · "
+                f"atualizado às {latest.timestamp.strftime('%H:%M:%S UTC')}"
             ),
         ],
         className="envmon-status-row",
@@ -150,35 +195,53 @@ def _build_summary(readings: list[SensorReading]) -> list[Any]:
     return [stat_row, status_row]
 
 
-def create_app(repository: ReadingRepository, *, location: str = "") -> Dash:
+def create_app(
+    repository: ReadingRepository, *, default_sensor_id: str = "", default_sensor_label: str = ""
+) -> Dash:
     app = Dash(__name__, assets_folder=str(_ASSETS_DIR))
-    app.title = "Environmental Monitoring"
+    app.title = "Monitoramento Ambiental"
 
-    header_children: list[Any] = [
-        html.Div(
-            [
-                html.H1("Air Quality Dashboard", className="envmon-title"),
-                html.P(
-                    "Live PM2.5 / PM10 readings ingested from the MQTT pipeline.",
-                    className="envmon-subtitle",
-                ),
-            ]
-        )
-    ]
-    if location:
-        header_children.append(html.Div(f"📍 {location}", className="envmon-location"))
-
+    # Dropdown starts empty; the options/refresh callback below populates it
+    # on first load and keeps it in sync with whichever sensors have
+    # actually published, on every refresh tick — a sensor that starts
+    # publishing after the dashboard is already running still shows up
+    # within one refresh interval, no restart needed.
     app.layout = html.Div(
         [
-            html.Div(header_children, className="envmon-header"),
+            html.Div(
+                [
+                    html.H1("Painel de Qualidade do Ar", className="envmon-title"),
+                    html.P(
+                        "Leituras de PM2.5 / PM10 em tempo real, ingeridas via pipeline MQTT.",
+                        className="envmon-subtitle",
+                    ),
+                ],
+                className="envmon-header",
+            ),
+            html.Div(
+                [
+                    html.Label(
+                        "Estado / sensor", htmlFor="sensor-select", className="envmon-stat-label"
+                    ),
+                    dcc.Dropdown(
+                        id="sensor-select",
+                        options=[],
+                        value=None,
+                        clearable=False,
+                        placeholder="Selecione um estado...",
+                    ),
+                ],
+                className="envmon-select-row",
+            ),
             html.Div(id="summary"),
             html.Div(
                 dcc.Graph(id="air-quality-graph", config={"displayModeBar": False}),
                 className="envmon-chart-card",
             ),
             html.Div(
-                "Data source: SimulatedSensor (synthetic) unless --mode openweather is used for "
-                "real measured air-quality data. See docs/ARCHITECTURE.md.",
+                "As leituras são ingeridas via MQTT a partir da fonte configurada no pipeline "
+                "— dados reais da OpenWeatherMap ou o simulador sintético. Veja "
+                "docs/ARCHITECTURE.md.",
                 className="envmon-footer",
             ),
             dcc.Interval(id="refresh-interval", interval=REFRESH_INTERVAL_MS, n_intervals=0),
@@ -187,13 +250,35 @@ def create_app(repository: ReadingRepository, *, location: str = "") -> Dash:
     )
 
     @app.callback(
+        Output("sensor-select", "options"),
+        Output("sensor-select", "value"),
+        Input("refresh-interval", "n_intervals"),
+        State("sensor-select", "value"),
+    )
+    def _refresh_sensor_options(
+        _n_intervals: int, current_value: str | None
+    ) -> tuple[list[dict[str, str]], str | None]:
+        sensor_ids = repository.distinct_sensor_ids()
+        options = _build_sensor_options(
+            sensor_ids, default_sensor_id=default_sensor_id, default_label=default_sensor_label
+        )
+        selected = _resolve_sensor_selection(sensor_ids, current_value, default_sensor_id)
+        return options, selected
+
+    @app.callback(
         Output("air-quality-graph", "figure"),
         Output("summary", "children"),
         Input("refresh-interval", "n_intervals"),
+        Input("sensor-select", "value"),
     )
-    def _refresh(_n_intervals: int) -> tuple[go.Figure, list[Any]]:
-        readings = repository.latest(DEFAULT_READING_LIMIT)
+    def _refresh_readings(
+        _n_intervals: int, selected_sensor_id: str | None
+    ) -> tuple[go.Figure, list[Any]]:
+        readings = repository.latest(DEFAULT_READING_LIMIT, sensor_id=selected_sensor_id)
         figure = _build_figure(readings) if readings else go.Figure()
-        return figure, _build_summary(readings)
+        summary = _build_summary(
+            readings, default_sensor_id=default_sensor_id, default_label=default_sensor_label
+        )
+        return figure, summary
 
     return app

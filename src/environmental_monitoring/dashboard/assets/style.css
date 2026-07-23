@@ -53,10 +53,14 @@ body {
   margin: 4px 0 0;
 }
 
-.envmon-location {
-  font-size: 14px;
-  color: var(--text-secondary);
-  white-space: nowrap;
+.envmon-select-row {
+  max-width: 320px;
+  margin-bottom: 20px;
+}
+
+.envmon-select-row label {
+  display: block;
+  margin-bottom: 6px;
 }
 
 .envmon-stat-row {
