@@ -111,7 +111,7 @@ def _build_figure(readings: list[SensorReading]) -> go.Figure:
         ],
         layout=go.Layout(
             margin={"l": 48, "r": 16, "t": 16, "b": 40},
-            height=340,
+            height=290,
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
             font={
@@ -148,7 +148,7 @@ def _build_summary(
     if not readings:
         return [
             html.Div(
-                "Aguardando dados do sensor — inicie o simulador ou o serviço de ingestão.",
+                "Aguardando dados do sensor - inicie o simulador ou o serviço de ingestão.",
                 className="envmon-empty",
             )
         ]
@@ -167,11 +167,11 @@ def _build_summary(
                 "Temperatura",
                 f"{latest.temperature_celsius:.1f} °C"
                 if latest.temperature_celsius is not None
-                else "—",
+                else "-",
             ),
             _stat_tile(
                 "Umidade",
-                f"{latest.humidity_percent:.1f}%" if latest.humidity_percent is not None else "—",
+                f"{latest.humidity_percent:.1f}%" if latest.humidity_percent is not None else "-",
             ),
         ],
         className="envmon-stat-row",
@@ -185,7 +185,7 @@ def _build_summary(
                 style={"backgroundColor": bg_color, "color": text_color},
             ),
             html.Span(
-                f"{len(readings)} leituras — {location_label} · "
+                f"{len(readings)} leituras - {location_label} · "
                 f"atualizado às {latest.timestamp.strftime('%H:%M:%S UTC')}"
             ),
         ],
@@ -237,10 +237,6 @@ def create_app(
             html.Div(
                 dcc.Graph(id="air-quality-graph", config={"displayModeBar": False}),
                 className="envmon-chart-card",
-            ),
-            html.Div(
-                "As leituras são ingeridas via MQTT — dados reais da OpenWeatherMap.",
-                className="envmon-footer",
             ),
             dcc.Interval(id="refresh-interval", interval=REFRESH_INTERVAL_MS, n_intervals=0),
         ],
