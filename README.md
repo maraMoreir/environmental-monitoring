@@ -53,7 +53,7 @@ Follow the steps below to set up the environment and install the project's depen
 3. **Install the dependencies:**
 
     ```bash
-    pip install -r requirements.txt
+python -m pip install -r requirements.txt
     ```
 
 ## Usage
