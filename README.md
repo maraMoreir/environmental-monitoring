@@ -60,7 +60,7 @@ Follow the steps below to set up the environment and install the project's depen
 
 1. **Sensor Configuration:**
 
-   Configure your IoT sensors according to the manufacturer's instructions. Ensure they are connected and sending data correctly.
+   Configure your IoT sensors according to the instructions. Ensure they are connected and sending data correctly.
 
 2. **Environment Setup:**
 
