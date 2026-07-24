@@ -24,7 +24,7 @@ for a concrete injection-safety regression test).
 
 - Zero extra infrastructure: no database server/container, no credentials
   to manage.
-- A real relational store, not a CSV — proper types, an index, and
+- A real relational store, not a CSV - proper types, an index, and
   transactional writes, so the pattern generalizes to a managed database
   without a rewrite (only `repository.py` would change).
 - SQLite's single-writer model is a genuine limitation at production scale;
