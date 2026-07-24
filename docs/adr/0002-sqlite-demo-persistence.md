@@ -1,9 +1,5 @@
 # 2. SQLite for demo persistence
 
-## Status
-
-Accepted
-
 ## Context
 
 The ingestion service needs somewhere durable to put validated readings so
