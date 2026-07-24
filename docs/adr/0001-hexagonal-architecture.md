@@ -1,9 +1,5 @@
 # 1. Hexagonal architecture (ports & adapters)
 
-## Status
-
-Accepted
-
 ## Context
 
 The original codebase was four unconnected scripts: an MQTT sensor loop, an
