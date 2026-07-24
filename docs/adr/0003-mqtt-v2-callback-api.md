@@ -15,7 +15,7 @@ warning and will stop working in a future release.
 
 Separately, the original `aws_iot.py` embedded
 `aws_access_key_id='YOUR_ACCESS_KEY'` / `aws_secret_access_key='YOUR_SECRET_KEY'`
-placeholders directly in source — a real credential-hygiene problem, and one
+placeholders directly in source - a real credential-hygiene problem, and one
 that made the module impossible to run or test without editing code.
 
 ## Decision
